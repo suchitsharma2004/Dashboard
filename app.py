@@ -51,15 +51,42 @@ num_projects = {
 }
 
 # Display metrics in boxes
+st.markdown(
+        """
+        <style>
+        .metric-box {
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            color: white;
+        }
+        .completed { background-color: #4CAF50; }
+        .onhold { background-color: #FF9800; }
+        .inprogress { background-color: #2196F3; }
+        .to_be_started { background-color: #9E9E9E; }
+        </style>
+        """, unsafe_allow_html=True
+    )
+
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.metric(label='Completed', value=num_projects['Completed'])
+    st.markdown(f'<div class="metric-box completed"><h2>Completed</h2><p>{num_projects["Completed"]}</p></div>', unsafe_allow_html=True)
 with col2:
-    st.metric(label='Onhold', value=num_projects['Onhold'])
+    st.markdown(f'<div class="metric-box onhold"><h2>Onhold</h2><p>{num_projects["Onhold"]}</p></div>', unsafe_allow_html=True)
 with col3:
-    st.metric(label='Inprogress', value=num_projects['Inprogress'])
+        st.markdown(f'<div class="metric-box inprogress"><h2>Inprogress</h2><p>{num_projects["Inprogress"]}</p></div>', unsafe_allow_html=True)
 with col4:
-    st.metric(label='To Be Started', value=num_projects['To Be Started'])
+    st.markdown(f'<div class="metric-box to_be_started"><h2>To Be Started</h2><p>{num_projects["To Be Started"]}</p></div>', unsafe_allow_html=True)
+
+# col1, col2, col3, col4 = st.columns(4)
+# with col1:
+#     st.metric(label='Completed', value=num_projects['Completed'])
+# with col2:
+#     st.metric(label='Onhold', value=num_projects['Onhold'])
+# with col3:
+#     st.metric(label='Inprogress', value=num_projects['Inprogress'])
+# with col4:
+#     st.metric(label='To Be Started', value=num_projects['To Be Started'])
 
 # Rightmost column for additional analytics
 col5, col6 = st.columns([3, 1])
