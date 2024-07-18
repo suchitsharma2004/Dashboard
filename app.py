@@ -10,10 +10,11 @@ file_path = r'C:\Users\sharmasc\Documents\GitHub\Dashboard\Project-2024-07-16.xl
 df = pd.read_excel(file_path)
 df['estimated_time'] = pd.to_timedelta(df['estimated_time'])
 df['remaining_time'] = pd.to_timedelta(df['remaining_time'])
-# Convert estimated_time and remaining_time to numeric
-# df['estimated_time'] = pd.to_numeric(df['estimated_time'], errors='coerce')
-# df['remaining_time'] = pd.to_numeric(df['remaining_time'], errors='coerce')
+df['tentative_start_date'] = pd.to_datetime(df['tentative_start_date'])
 
+
+logo_url = r'C:\Users\sharmasc\Documents\GitHub\Dashboard\logo.jfif'
+st.sidebar.image(logo_url)
 # Sidebar filters
 st.sidebar.title('Filters')
 filter_active_inactive = st.sidebar.selectbox('Active/Inactive', ['All', 'Active', 'Inactive'])
@@ -21,7 +22,10 @@ filter_director = st.sidebar.selectbox('Project Director', ['All'] + df['project
 filter_hod = st.sidebar.selectbox('Project HOD', ['All'] + df['project_hod'].unique().tolist())
 filter_manager = st.sidebar.selectbox('Project Manager', ['All'] + df['project_manager'].unique().tolist())
 filter_lead = st.sidebar.selectbox('Team Lead', ['All'] + df['project_teamlead'].unique().tolist())
-lagging_filter = st.sidebar.checkbox('Show lagging projects')
+lagging_filter = st.sidebar.checkbox('Lagging/Non-Lagging')
+
+start_date = st.sidebar.date_input('Start Date', df['tentative_start_date'].min().date())
+end_date = st.sidebar.date_input('End Date', df['tentative_start_date'].max().date())
 
 # Filter data based on selected filters
 filtered_data = df.copy()
@@ -40,6 +44,9 @@ if filter_manager != 'All':
 
 if filter_lead != 'All':
     filtered_data = filtered_data[filtered_data['project_teamlead'] == filter_lead]
+
+filtered_data = filtered_data[(filtered_data['tentative_start_date'] >= pd.Timestamp(start_date)) &
+                              (filtered_data['tentative_start_date'] <= pd.Timestamp(end_date))]
 
 # Metrics boxes
 statuses = ['completed', 'onhold', 'inprogress', 'to_be_started']
@@ -78,45 +85,41 @@ with col3:
 with col4:
     st.markdown(f'<div class="metric-box to_be_started"><h2>To Be Started</h2><p>{num_projects["To Be Started"]}</p></div>', unsafe_allow_html=True)
 
-# col1, col2, col3, col4 = st.columns(4)
-# with col1:
-#     st.metric(label='Completed', value=num_projects['Completed'])
-# with col2:
-#     st.metric(label='Onhold', value=num_projects['Onhold'])
-# with col3:
-#     st.metric(label='Inprogress', value=num_projects['Inprogress'])
-# with col4:
-#     st.metric(label='To Be Started', value=num_projects['To Be Started'])
-
-# Rightmost column for additional analytics
-col5, col6 = st.columns([3, 1])
-
-# Pie chart for project status distribution
-status_counts = filtered_data['status'].value_counts().reset_index()
-status_counts.columns = ['status', 'count']
-fig_pie = px.pie(status_counts, values='count', names='status', title='Project Status Distribution', hole=0.4)
-col6.plotly_chart(fig_pie, use_container_width=True)
-
-# Filter for projects nearing deadline but lagging behind if checkbox is checked
 if lagging_filter:
+    col4, col5 = st.columns([1, 1])
     filtered_data['elapsed_time'] = filtered_data['estimated_time'] - filtered_data['remaining_time']
     filtered_data['time_ratio'] = filtered_data['elapsed_time'] / filtered_data['estimated_time']
     filtered_data['completion_ratio'] = filtered_data['total_achievement'] / filtered_data['sample']
 
     lagging_projects = filtered_data[(filtered_data['status'] == 'inprogress') & 
-                                     (filtered_data['completion_ratio'] < 0.6) & 
-                                     (filtered_data['time_ratio'] > 0.6)]
+                                     (filtered_data['completion_ratio'] < filtered_data['time_ratio'])]
     lagging_projects['completed_percent'] = lagging_projects['completion_ratio'] * 100
+    lagging_projects['elapsed_time_percent'] = lagging_projects['time_ratio'] * 100
 
     fig_lagging_projects = px.bar(lagging_projects.sort_values(by='completed_percent'), 
-                                  x='completed_percent', y='name', 
+                                  x='elapsed_time_percent', y='name', 
                                   orientation='h', 
-                                  title='Lagging Projects (80% time, <80% completed)',
-                                  labels={'completed_percent': 'Completed %', 'name': 'Project ID'},
+                                  title='Lagging Projects',
+                                  labels={'completed_percent': 'Completed %', 'elapsed_time_percent': 'Elapsed Time %', 'name': 'Project ID'},
                                   color='completed_percent',
-                                  color_continuous_scale='viridis')
+                                  color_continuous_scale='Inferno', height=600)
 
-    col5.plotly_chart(fig_lagging_projects, use_container_width=True)
+
+    non_lagging_projects = filtered_data[(filtered_data['status'] == 'inprogress') & 
+                                         (filtered_data['completion_ratio'] > filtered_data['time_ratio'])]
+    non_lagging_projects['completed_percent'] = non_lagging_projects['completion_ratio'] * 100
+    non_lagging_projects['elapsed_time_percent'] = non_lagging_projects['time_ratio'] * 100
+
+    fig_non_lagging_projects = px.bar(non_lagging_projects.sort_values(by='completed_percent'), 
+                                      x='elapsed_time_percent', y='name', 
+                                      orientation='h', 
+                                      title='Non-Lagging Projects',
+                                      labels={'completed_percent': 'Completed %', 'elapsed_time_percent': 'Elapsed Time %', 'name': 'Project ID'},
+                                      color='completed_percent',
+                                      color_continuous_scale='Inferno', height=600)
+
+    col4.plotly_chart(fig_lagging_projects, use_container_width=True)
+    col5.plotly_chart(fig_non_lagging_projects, use_container_width=True)
 else:
     # Horizontal bar graph for completed percentage of projects in progress
     in_progress_data = filtered_data[filtered_data['status'] == 'inprogress'].copy()
@@ -128,11 +131,20 @@ else:
                                    title='Completed Percentage of Projects in Progress',
                                    labels={'completed_percent': 'Completed %', 'name': 'Project ID'},
                                    color='completed_percent',
-                                   color_continuous_scale='viridis')
+                                   color_continuous_scale='Viridis', height=600)
+    st.plotly_chart(fig_completed_percent, use_container_width=True)
 
-    col5.plotly_chart(fig_completed_percent, use_container_width=True)
 
+# Rightmost column for additional analytics
+col6, col7 = st.columns([2, 1])
 
+# Pie chart for project status distribution
+status_counts = filtered_data['status'].value_counts().reset_index()
+status_counts.columns = ['status', 'count']
+fig_pie = px.pie(status_counts, values='count', names='status', title='Project Status Distribution', hole=0.4, color_discrete_sequence=px.colors.sequential.Viridis_r)
+col7.plotly_chart(fig_pie, use_container_width=True)
+
+# Graph for revenue
 cpi = filtered_data['cpi']
 revenue_in_progress = (cpi * filtered_data[filtered_data['status'] == 'inprogress']['sample']).sum()
 accrued_revenue = (cpi * filtered_data[filtered_data['status'] == 'completed']['sample']).sum()
@@ -140,14 +152,14 @@ invoiced_revenue = (cpi * filtered_data[filtered_data['status'] == 'onhold']['sa
 potential_revenue = (cpi * filtered_data[filtered_data['status'] == 'to_be_started']['sample']).sum()
 
 revenues = {
-        'In Progress': revenue_in_progress,
-        'Accrued': accrued_revenue,
-        'Invoiced': invoiced_revenue,
-        'Potential': potential_revenue
-    }
+    'In Progress': revenue_in_progress,
+    'Accrued': accrued_revenue,
+    'Invoiced': invoiced_revenue,
+    'Potential': potential_revenue
+}
 
-    # Revenue bar chart
+# Revenue bar chart
 revenue_df = pd.DataFrame(list(revenues.items()), columns=['Revenue Type', 'Amount'])
-fig_revenue = px.bar(revenue_df, x='Revenue Type', y='Amount', title='Revenue Distribution', labels={'Amount': 'Revenue Amount', 'Revenue Type': 'Revenue Type'})
+fig_revenue = px.bar(revenue_df, x='Revenue Type', y='Amount', title='Revenue Distribution', labels={'Amount': 'Revenue Amount', 'Revenue Type': 'Revenue Type'}, color_discrete_sequence=px.colors.sequential.Viridis_r)
 
-st.plotly_chart(fig_revenue, use_container_width=True)
+col6.plotly_chart(fig_revenue, use_container_width=True)
