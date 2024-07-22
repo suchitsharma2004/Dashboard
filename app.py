@@ -93,8 +93,8 @@ if lagging_filter:
 
     lagging_projects = filtered_data[(filtered_data['status'] == 'inprogress') & 
                                      (filtered_data['completion_ratio'] < filtered_data['time_ratio'])]
-    lagging_projects['completed_percent'] = lagging_projects['completion_ratio'] * 100
-    lagging_projects['elapsed_time_percent'] = lagging_projects['time_ratio'] * 100
+    lagging_projects['completed_percent'] = (lagging_projects['completion_ratio'] * 100).round(4)
+    lagging_projects['elapsed_time_percent'] = (lagging_projects['time_ratio'] * 100).round(2)
 
     fig_lagging_projects = px.bar(lagging_projects.sort_values(by='completed_percent'), 
                                   x='elapsed_time_percent', y='name', 
@@ -107,8 +107,8 @@ if lagging_filter:
 
     non_lagging_projects = filtered_data[(filtered_data['status'] == 'inprogress') & 
                                          (filtered_data['completion_ratio'] > filtered_data['time_ratio'])]
-    non_lagging_projects['completed_percent'] = non_lagging_projects['completion_ratio'] * 100
-    non_lagging_projects['elapsed_time_percent'] = non_lagging_projects['time_ratio'] * 100
+    non_lagging_projects['completed_percent'] = (non_lagging_projects['completion_ratio'] * 100).round(4)
+    non_lagging_projects['elapsed_time_percent'] = (non_lagging_projects['time_ratio'] * 100).round(2)
 
     fig_non_lagging_projects = px.bar(non_lagging_projects.sort_values(by='completed_percent'), 
                                       x='elapsed_time_percent', y='name', 
@@ -123,7 +123,7 @@ if lagging_filter:
 else:
     # Horizontal bar graph for completed percentage of projects in progress
     in_progress_data = filtered_data[filtered_data['status'] == 'inprogress'].copy()
-    in_progress_data['completed_percent'] = (in_progress_data['total_achievement'] / in_progress_data['sample']) * 100
+    in_progress_data['completed_percent'] = (in_progress_data['total_achievement'] / in_progress_data['sample']).round(4)*100
 
     fig_completed_percent = px.bar(in_progress_data.sort_values(by='completed_percent'), 
                                    x='completed_percent', y='name', 
